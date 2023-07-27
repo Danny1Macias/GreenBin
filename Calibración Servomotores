@@ -1,0 +1,111 @@
+from machine import Pin, PWM
+from utime import sleep, sleep_ms
+import network, time, urequests
+
+def conectaWifi (red, password):
+    global miRed
+    miRed = network.WLAN(network.STA_IF)     
+    if not miRed.isconnected():              # Si no está conectado…
+        miRed.active(True)                   # activa la interface
+        miRed.connect(red, password)         # Intenta conectar con la red
+        print('Conectando a la red', red + "…")
+        timeout = time.time ()
+        while not miRed.isconnected():           # Mientras no se conecte...
+            if (time.ticks_diff (time.time (), timeout) > 10):
+                return False
+    return True
+
+# Inicializar los servomotores
+servo1 = PWM(Pin(12), freq=50)  # caneca verde
+servo2 = PWM(Pin(14), freq=50)  # caneca blanca
+servo3 = PWM(Pin(15), freq=50)  # caneca negra 
+
+if conectaWifi("DULCE HOGAR", "Pscya812"):
+    print("Conexión exitosa!")
+    print('Datos de la red (IP/netmask/gw/DNS):', miRed.ifconfig())
+
+    url = "https://api.thingspeak.com/update?api_key=3A77KDGXXDX9XQ8M"
+
+    # Definir las variables de las canecas
+    caneca_verde = 0
+    caneca_blanca = 0
+    caneca_negra = 0
+    Botellas = 0
+    Latas = 0
+    Papel = 0
+    Organicos = 0
+    Vidrio = 0
+    Metal = 0
+
+    def map_servo(x):
+        return int((x - 0) * (125 - 25) / (180 - 0) + 25)
+
+    while True:
+        # Obtener el tipo de desperdicio desde la entrada del usuario
+        tipo_desperdicio = input("Ingrese el tipo de desperdicio: ")
+    
+        # Verificar el tipo de desperdicio y asignar la variable de la caneca correspondiente
+        if tipo_desperdicio == "Desperdicios":
+            angulos = 175
+            m = map_servo(angulos)
+            servo1.duty(m)  # Ajustar servo1 (caneca verde)
+            print("R: {}, A: {}°".format(m, angulos))
+            print("Caneca verde abierta")
+            sleep_ms(3000)
+            for i in range(170, 125, -1):
+                m = map_servo(i)
+                servo1.duty(m)  # Ajustar servo1 (caneca verde)
+                sleep_ms(10)
+            
+            print("Estado de las canecas:")
+            print("Caneca verde cerrada")
+            caneca_verde += 1
+            Botellas += 1
+            print("Objetos desechados en caneca verde:", caneca_verde)
+            
+        elif tipo_desperdicio in ["Botella", "Papel", "Vidrio","Latas"]:
+            angulos = 170
+            m = map_servo(angulos)
+            servo2.duty(m)  # Ajustar servo2 (caneca blanca)
+            print("R: {}, A: {}°".format(m, angulos))
+            print("Caneca blanca abierta")
+            sleep_ms(3000)
+            for i in range(170, 125, -1):
+                m = map_servo(i)
+                servo2.duty(m)  # Ajustar servo2 (caneca blanca)
+                sleep_ms(10)
+            
+            print("Estado de las canecas:")
+            print("Caneca blanca cerrada")
+            caneca_blanca += 1
+            if tipo_desperdicio == "Botella":
+                Botellas += 1
+            elif tipo_desperdicio == "Papel":
+                Papel += 1
+            elif tipo_desperdicio == "Vidrio":
+                Vidrio += 1
+            print("Objetos desechados en caneca blanca:", caneca_blanca)
+            
+        elif tipo_desperdicio == "Contaminados":
+            angulos = 170
+            m = map_servo(angulos)
+            servo3.duty(m)  # Ajustar servo3 (caneca negra)
+            print("R: {}, A: {}°".format(m, angulos))
+            print("Caneca negra abierta")
+            sleep_ms(3000)
+            for i in range(170, 125, -1):
+                m = map_servo(i)
+                servo3.duty(m)  # Ajustar servo3 (caneca negra)
+                sleep_ms(10)
+            
+            print("Estado de las canecas:")
+            print("Caneca negra cerrada")
+            caneca_negra += 1
+            Organicos += 1
+            print("Objetos desechados en caneca negra:", caneca_negra)
+            
+        else:
+            print("Error: Tipo de desperdicio no válido.")
+            angulos = 125
+            m = map_servo(angulos)
+            servo1.duty(m)  # Ajustar ser
